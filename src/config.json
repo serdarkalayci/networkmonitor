@@ -1,0 +1,6 @@
+{
+    "BASE_URL": ":5500",
+    "TARGET_ADDR": "https://medium.com",
+    "CHECK_FREQUENCY": 1,
+    "BUCKETS": [100, 300, 900, 2000]
+}

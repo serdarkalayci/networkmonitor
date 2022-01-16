@@ -1,0 +1,64 @@
+package main
+
+import (
+	"context"
+	stdlog "log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/serdarkalayci/gonfig"
+)
+
+func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	config := gonfig.Configuration{}.AddConfigSource(gonfig.ConfigSource{
+		Type:     "json",
+		FilePath: "config.json",
+	}).AddConfigSource(gonfig.ConfigSource{
+		Type: "env",
+	})
+	bindAddress := config.GetStringOrDefault("BASE_URL", ":5500")
+	l := stdlog.New(log.Logger, "networkmonitor ", stdlog.LstdFlags)
+	http.Handle("/metrics", promhttp.Handler())
+	// create a new server
+	s := http.Server{
+		Addr:         bindAddress, // configure the bind address
+		ErrorLog:     l,
+		ReadTimeout:  5 * time.Second,   // max time to read request from the client
+		WriteTimeout: 10 * time.Second,  // max time to write response to the client
+		IdleTimeout:  120 * time.Second, // max time for connections using TCP Keep-Alive
+	}
+
+	// start the server
+	go func() {
+		log.Debug().Msgf("Starting server on %s", bindAddress)
+
+		err := s.ListenAndServe()
+		if err != nil {
+			log.Error().Msgf("Error starting server: %s\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	go checkAddress(config)
+
+	// trap sigterm or interupt and gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Kill)
+
+	// Block until a signal is received.
+	sig := <-c
+	log.Debug().Msgf("Got signal: %v", sig)
+
+	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	s.Shutdown(ctx)
+
+}
