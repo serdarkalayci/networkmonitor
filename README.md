@@ -30,4 +30,6 @@ The repo contains a [dockerfile](prometheus/dockerfile) and [prometheus.yml](pro
 
 There is another [dockerfile](src/dockerfile) which builds our project and place the executable inside a `alpine` base image which also installs ca-certificates to prevent false positive SSL certificate errors.
 
-The repo also contains [docker-compose.yaml](docker-compose.yaml) file to create a container from Prometheus dockerfile, one container with Grafana image and one with our application is running. 
+The repo also contains [docker-compose.yaml](docker-compose.yaml) file to create a container from Prometheus dockerfile, one container with Grafana image and one with our application is running. When `docker compose up` command is used on to root folder, all three applications will run in the same network. Grafana dashboard will be accessible through `http://localhost:3000` and after logging in with the username `admin` and password `admin` the Prometheus data soource can be added with the address `http://prometheus:9090`. By then a dashboard can be created depending of the needs of the user. Below is an example dashboard showing a heatmap with the durations as buckets and the bucket distrubiton bars for the response code 200, response codes other than 200 and errored requests.
+
+![Grafana Dashboard Example](dashboard.png)
